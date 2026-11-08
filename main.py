@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart
-import os
 
-BOT_TOKEN = os.getenv("9224806523:AAHC-oQFFhjVTVqFJRn4_DgNuAeJ5ALdxq8") 
+# Твой токен вшит прямо в код
+BOT_TOKEN = "9224806523:AAHC-oQFFhjVTVqFJRn4_DgNuAeJ5ALdxq8"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
