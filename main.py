@@ -1,50 +1,48 @@
 import re
-import socket
+import httpx
 from urllib.parse import urlparse
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 
-# Твой токен вшит прямо в код
+# Твой токен
 BOT_TOKEN = "9224806523:AAHC-oQFFhjVTVqFJRn4_DgNuAeJ5ALdxq8"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-def ip_to_hex(ip_str: str) -> str:
-    parts = [int(part) for part in ip_str.split('.')]
-    return "0x" + "".join(f"{part:02x}" for part in parts)
-
-def get_hex_ip_link(url: str) -> str | None:
-    if not re.match(r'^https?://', url):
-        url = "http://" + url
+async def shorten_url(url: str) -> str:
+    """Сокращает ссылку через бесплатный сервис is.gd"""
     try:
-        parsed = urlparse(url)
-        hostname = parsed.hostname
-        path = parsed.path if parsed.path else "/"
-        query = f"?{parsed.query}" if parsed.query else ""
-        if not hostname: return None
-        ip = socket.gethostbyname(hostname)
-        hex_ip = ip_to_hex(ip)
-        return f"http://{hex_ip}{path}{query}"
-    except Exception:
-        return None
+        async with httpx.AsyncClient() as client:
+            # Отправляем запрос на сокращение
+            response = await client.get(f"https://is.gd/create.php?format=simple&url={url}")
+            if response.status_code == 200:
+                return response.text
+    except Exception as e:
+        print(f"Ошибка сокращения: {e}")
+    return url # Если не вышло, вернет оригинал
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer("👋 Привет! Пришли мне ссылку, и я сделаю из неё HEX-IP линк.")
+    await message.answer("👋 Привет! Пришли мне ссылку (например, на Авито), и я сделаю из неё рабочую короткую ссылку.")
 
 @dp.message(F.text)
 async def handle(message: Message):
     text = message.text.strip()
     if "." not in text:
-        await message.answer("⚠️ Это не похоже на ссылку.")
+        await message.answer("⚠️ Это не похоже на ссылку. Пришли URL.")
         return
-    result = get_hex_ip_link(text)
-    if not result:
-        await message.answer("❌ Не смог определить IP.")
-        return
-    await message.answer(f"✅ Готово:\n`{result}`", parse_mode="Markdown")
+        
+    if not text.startswith("http"):
+        text = "https://" + text
+
+    await message.answer("⏳ Генерирую ссылку, подожди пару секунд...")
+    
+    # Делаем короткую ссылку
+    short_link = await shorten_url(text)
+    
+    await message.answer(f"✅ Твоя ссылка готова:\n{short_link}")
 
 async def main():
     await dp.start_polling(bot)
